@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from huggingface_hub import InferenceClient
+import requests
 import os
 
 app = FastAPI()
@@ -8,27 +8,37 @@ app = FastAPI()
 class PromptRequest(BaseModel):
     prompt: str
 
+# We use the NEW Router URL structure
+# We use Flan-T5 because it is small, fast, and usually works on the free tier.
+API_URL = "https://router.huggingface.co/hf-inference/models/google/flan-t5-small"
+
 @app.get("/")
 def home():
-    return {"message": "LLM Gateway is Live"}
+    return {"message": "LLM Gateway is Live (Router Version)"}
 
 @app.post("/generate")
 def generate_text(request: PromptRequest):
     api_token = os.environ.get("HF_TOKEN")
     if not api_token:
-        return {"error": "API Token is missing on server!"}
+        raise HTTPException(status_code=500, detail="API Token is missing!")
+
+    headers = {"Authorization": f"Bearer {api_token}"}
+    payload = {"inputs": request.prompt}
 
     try:
-        # FIX: We provide the FULL URL to bypass the broken "lookup" logic
-        # We are using Google's Flan-T5-Small (very fast and reliable)
-        client = InferenceClient(
-            model="https://api-inference.huggingface.co/models/google/flan-t5-small",
-            token=api_token
-        )
+        # Direct request to the new Router
+        response = requests.post(API_URL, headers=headers, json=payload)
         
-        # Flan-T5 is a "Text-to-Text" model, so we use text_generation
-        response = client.text_generation(request.prompt, max_new_tokens=50)
-        return {"response": response}
+        # If the new Router fails (404/500), we print why
+        if response.status_code != 200:
+            return {
+                "error": "Provider Error", 
+                "status": response.status_code, 
+                "details": response.text
+            }
+        
+        # Success!
+        return response.json()
 
     except Exception as e:
         return {"error": str(e)}
