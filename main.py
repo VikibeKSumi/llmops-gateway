@@ -6,8 +6,8 @@ import os
 app = FastAPI()
 
 # 1. Setup the Model Link
-# We use Zephyr because it is free, fast, and ungated
-API_URL = "https://router.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
+# We use GPT-2 because it is the "Hello World" of LLMs (always online)
+API_URL = "https://router.huggingface.co/models/gpt2"
 
 # 2. Define Input Structure
 class PromptRequest(BaseModel):
