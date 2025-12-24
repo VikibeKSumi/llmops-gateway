@@ -8,13 +8,12 @@ app = FastAPI()
 class PromptRequest(BaseModel):
     prompt: str
 
-# 1. The NEW Standard URL (OpenAI-compatible)
-# This is the modern router address that works for all new models
+# We use the standard Chat API
 API_URL = "https://router.huggingface.co/v1/chat/completions"
 
 @app.get("/")
 def home():
-    return {"message": "LLM Gateway is Live (SmolLM2)"}
+    return {"message": "LLM Gateway is Live (Qwen)"}
 
 @app.post("/generate")
 def generate_text(request: PromptRequest):
@@ -27,17 +26,13 @@ def generate_text(request: PromptRequest):
         "Content-Type": "application/json"
     }
 
-    # 2. The Payload (Chat Format)
-    # We use "HuggingFaceTB/SmolLM2-1.7B-Instruct" because it is:
-    # - Free
-    # - Ungated (No permission needed)
-    # - Native to the new Router
+    # We use Qwen because it is the current default "Free Tier" champion
     payload = {
-        "model": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+        "model": "Qwen/Qwen2.5-Coder-32B-Instruct",
         "messages": [
             {"role": "user", "content": request.prompt}
         ],
-        "max_tokens": 50
+        "max_tokens": 100
     }
 
     try:
@@ -50,9 +45,7 @@ def generate_text(request: PromptRequest):
                 "details": response.text
             }
         
-        # 3. Parse the Chat Response
         data = response.json()
-        # The answer is hidden deeper in the chat format
         answer = data['choices'][0]['message']['content']
         return {"response": answer}
 
