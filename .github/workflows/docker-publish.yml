@@ -27,7 +27,7 @@ jobs:
           context: .
           push: true
           # REPLACE 'your-username' below with your actual Docker Hub username!
-          tags: ${{ secrets.DOCKER_USERNAME }}/my-mlops-app:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/llmops-gateway:latest
           
        
 
