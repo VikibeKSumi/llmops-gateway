@@ -6,8 +6,8 @@ import os
 app = FastAPI()
 
 # 1. Setup the Model Link
-# We are using Mistral-7B-Instruct (High quality, open source)
-API_URL = "https://router.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
+# We use Zephyr because it is free, fast, and ungated
+API_URL = "https://router.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
 
 # 2. Define Input Structure
 class PromptRequest(BaseModel):
