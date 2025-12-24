@@ -20,6 +20,10 @@ def home():
 
 @app.post("/generate")
 def generate_text(request: PromptRequest):
+    # DEBUGGING: Print all available keys to the system logs
+    print("Available Env Vars:", os.environ.keys()) 
+    api_token = os.environ.get("HF_TOKEN")
+    
     # 3. Get the Secret Key securely
     api_token = os.environ.get("HF_TOKEN")
     
