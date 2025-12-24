@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from huggingface_hub import InferenceClient
+import requests
 import os
 
 app = FastAPI()
@@ -8,9 +8,13 @@ app = FastAPI()
 class PromptRequest(BaseModel):
     prompt: str
 
+# 1. The NEW Standard URL (OpenAI-compatible)
+# This is the modern router address that works for all new models
+API_URL = "https://router.huggingface.co/v1/chat/completions"
+
 @app.get("/")
 def home():
-    return {"message": "LLM Gateway is Live"}
+    return {"message": "LLM Gateway is Live (SmolLM2)"}
 
 @app.post("/generate")
 def generate_text(request: PromptRequest):
@@ -18,19 +22,39 @@ def generate_text(request: PromptRequest):
     if not api_token:
         raise HTTPException(status_code=500, detail="API Token is missing!")
 
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "Content-Type": "application/json"
+    }
+
+    # 2. The Payload (Chat Format)
+    # We use "HuggingFaceTB/SmolLM2-1.7B-Instruct" because it is:
+    # - Free
+    # - Ungated (No permission needed)
+    # - Native to the new Router
+    payload = {
+        "model": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+        "messages": [
+            {"role": "user", "content": request.prompt}
+        ],
+        "max_tokens": 50
+    }
+
     try:
-        # MAGIC FIX: We explicitly set provider="hf-inference"
-        # This forces the library to use the new router automatically.
-        client = InferenceClient(
-            model="gpt2", 
-            token=api_token,
-            provider="hf-inference" 
-        )
+        response = requests.post(API_URL, headers=headers, json=payload)
         
-        # GPT-2 is a text completion model
-        response = client.text_generation(request.prompt, max_new_tokens=50)
-        return {"response": response}
+        if response.status_code != 200:
+            return {
+                "error": "Provider Error", 
+                "status": response.status_code, 
+                "details": response.text
+            }
+        
+        # 3. Parse the Chat Response
+        data = response.json()
+        # The answer is hidden deeper in the chat format
+        answer = data['choices'][0]['message']['content']
+        return {"response": answer}
 
     except Exception as e:
-        # If this fails, it prints the exact reason
         return {"error": str(e)}
