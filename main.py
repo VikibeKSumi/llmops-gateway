@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import requests
+from huggingface_hub import InferenceClient
 import os
 
 app = FastAPI()
@@ -8,13 +8,9 @@ app = FastAPI()
 class PromptRequest(BaseModel):
     prompt: str
 
-# We use the NEW Router URL structure
-# We use Flan-T5 because it is small, fast, and usually works on the free tier.
-API_URL = "https://router.huggingface.co/hf-inference/models/google/flan-t5-small"
-
 @app.get("/")
 def home():
-    return {"message": "LLM Gateway is Live (Router Version)"}
+    return {"message": "LLM Gateway is Live"}
 
 @app.post("/generate")
 def generate_text(request: PromptRequest):
@@ -22,23 +18,19 @@ def generate_text(request: PromptRequest):
     if not api_token:
         raise HTTPException(status_code=500, detail="API Token is missing!")
 
-    headers = {"Authorization": f"Bearer {api_token}"}
-    payload = {"inputs": request.prompt}
-
     try:
-        # Direct request to the new Router
-        response = requests.post(API_URL, headers=headers, json=payload)
+        # MAGIC FIX: We explicitly set provider="hf-inference"
+        # This forces the library to use the new router automatically.
+        client = InferenceClient(
+            model="gpt2", 
+            token=api_token,
+            provider="hf-inference" 
+        )
         
-        # If the new Router fails (404/500), we print why
-        if response.status_code != 200:
-            return {
-                "error": "Provider Error", 
-                "status": response.status_code, 
-                "details": response.text
-            }
-        
-        # Success!
-        return response.json()
+        # GPT-2 is a text completion model
+        response = client.text_generation(request.prompt, max_new_tokens=50)
+        return {"response": response}
 
     except Exception as e:
+        # If this fails, it prints the exact reason
         return {"error": str(e)}
