@@ -28,7 +28,8 @@ def call_huggingface_api(user_prompt: str):
     }
     
     # Using the standard URL that works for your model
-    url = "https://router.huggingface.co/hf-inference/v1/chat/completions"
+    # New/Correct URL (Points directly to Qwen)
+    url = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions"
     
     payload = {
         "model": "Qwen/Qwen2.5-Coder-32B-Instruct",
