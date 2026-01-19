@@ -2,52 +2,62 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import requests
 import os
+from langsmith import traceable 
 
 app = FastAPI()
 
+# 1. Define the Model once
 class PromptRequest(BaseModel):
     prompt: str
-
-# We use the standard Chat API
-API_URL = "https://router.huggingface.co/v1/chat/completions"
 
 @app.get("/")
 def home():
     return {"message": "LLM Gateway is Live (Qwen)"}
 
-@app.post("/generate")
-def generate_text(request: PromptRequest):
+# 2. The "Worker" Function (This is what we Trace)
+# We move ALL the logic here so LangSmith sees the inputs and outputs.
+@traceable 
+def call_huggingface_api(user_prompt: str):
     api_token = os.environ.get("HF_TOKEN")
     if not api_token:
-        raise HTTPException(status_code=500, detail="API Token is missing!")
+        raise ValueError("API Token is missing!")
 
     headers = {
         "Authorization": f"Bearer {api_token}",
         "Content-Type": "application/json"
     }
-
-    # We use Qwen because it is the current default "Free Tier" champion
+    
+    # Using the standard URL that works for your model
+    url = "https://router.huggingface.co/hf-inference/v1/chat/completions"
+    
     payload = {
         "model": "Qwen/Qwen2.5-Coder-32B-Instruct",
-        "messages": [
-            {"role": "user", "content": request.prompt}
-        ],
-        "max_tokens": 100
+        "messages": [{"role": "user", "content": user_prompt}],
+        "max_tokens": 500
     }
+    
+    # The actual network call
+    response = requests.post(url, headers=headers, json=payload)
+    
+    # Check for errors immediately inside the worker
+    if response.status_code != 200:
+        raise Exception(f"Provider Error {response.status_code}: {response.text}")
+        
+    return response.json()
 
+# 3. The Endpoint (The "Manager")
+# It just receives the request and delegates to the worker.
+@app.post("/generate")
+def generate_text(request: PromptRequest):
     try:
-        response = requests.post(API_URL, headers=headers, json=payload)
+        # CRITICAL: We call the decorated function here!
+        # This triggers the LangSmith trace.
+        api_data = call_huggingface_api(request.prompt)
         
-        if response.status_code != 200:
-            return {
-                "error": "Provider Error", 
-                "status": response.status_code, 
-                "details": response.text
-            }
-        
-        data = response.json()
-        answer = data['choices'][0]['message']['content']
+        # Extract the answer
+        answer = api_data['choices'][0]['message']['content']
         return {"response": answer}
 
     except Exception as e:
+        # If anything went wrong in the worker, we catch it here
         return {"error": str(e)}
