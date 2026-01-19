@@ -27,19 +27,18 @@ def call_huggingface_api(user_prompt: str):
         "Content-Type": "application/json"
     }
     
-    # The New Specific Router URL
-    url = "https://router.huggingface.co/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions"
+    # 1. NEW URL (Points to the 7B Model)
+    url = "https://router.huggingface.co/models/Qwen/Qwen2.5-Coder-7B-Instruct/v1/chat/completions"
     
+    # 2. NEW PAYLOAD (Matches the 7B Model)
     payload = {
-        "model": "Qwen/Qwen2.5-Coder-32B-Instruct",
+        "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
         "messages": [{"role": "user", "content": user_prompt}],
         "max_tokens": 500
     }
     
-    # The actual network call
     response = requests.post(url, headers=headers, json=payload)
     
-    # Check for errors immediately inside the worker
     if response.status_code != 200:
         raise Exception(f"Provider Error {response.status_code}: {response.text}")
         
