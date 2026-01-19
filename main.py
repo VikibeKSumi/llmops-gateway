@@ -27,9 +27,8 @@ def call_huggingface_api(user_prompt: str):
         "Content-Type": "application/json"
     }
     
-    # Using the standard URL that works for your model
-    # New/Correct URL (Points directly to Qwen)
-    url = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions"
+    # The New Specific Router URL
+    url = "https://router.huggingface.co/models/Qwen/Qwen2.5-Coder-32B-Instruct/v1/chat/completions"
     
     payload = {
         "model": "Qwen/Qwen2.5-Coder-32B-Instruct",
